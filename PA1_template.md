@@ -11,7 +11,8 @@ output:
 The raw data for this project is saved in CSV format.  A single transformation is used to transform
 the 'date' variable from a factor to date format.
 
-```{r}
+
+```r
 library(tidyverse)
 data <- read.csv("activity.csv")
 data <- mutate(data, date = as.Date(date))
@@ -21,7 +22,8 @@ data <- mutate(data, date = as.Date(date))
 
 A histogram of the total number of steps per day indicates a symmetric distribution with some outliers.
 
-```{r}
+
+```r
 data1 <- data %>%
 	group_by (date) %>%
 	summarise(total = sum(steps))
@@ -32,20 +34,63 @@ ggplot(data1, aes(x = total))+
 	labs(x = "Total Number of Steps per Day")
 ```
 
+![plot of chunk unnamed-chunk-2](figure/unnamed-chunk-2-1.png)
+
 Summary statistics verify the visually symmetric distribution with virtually identical
 mean and median.
 
-```{r, results = "asis"}
+
+```r
 st <- as.data.frame(unclass(summary(data1$total)))
 kable(st, col.names = c("Value"))
 ```
+
+<table>
+ <thead>
+  <tr>
+   <th style="text-align:left;">   </th>
+   <th style="text-align:right;"> Value </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> Min. </td>
+   <td style="text-align:right;"> 41.00 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> 1st Qu. </td>
+   <td style="text-align:right;"> 8841.00 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Median </td>
+   <td style="text-align:right;"> 10765.00 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Mean </td>
+   <td style="text-align:right;"> 10766.19 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> 3rd Qu. </td>
+   <td style="text-align:right;"> 13294.00 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Max. </td>
+   <td style="text-align:right;"> 21194.00 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> NA's </td>
+   <td style="text-align:right;"> 8.00 </td>
+  </tr>
+</tbody>
+</table>
 
 ## What is the average daily activity pattern?
 
 Visual examination of the average daily pattern indicates lulls during common sleeping times and activity
 during the day.  The period of maximum average steps occurs at 8:35 am with 206 steps..
   
-```{r}
+
+```r
 data2 <- data %>%
 	filter(!is.na(steps)) %>%
 	group_by(interval) %>%
@@ -59,31 +104,71 @@ ggplot(data2, aes(x=interval, y=average)) +
 	scale_x_continuous(breaks = c(300, 600, 900, 1200, 1500, 1800, 2100), 
 		labels = c("3 am", "6 am", "9 am", "Noon", "3 pm", "6 pm", "9 pm"))
 ```
-```{r}
+
+![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-4-1.png)
+
+```r
 max <- data2 %>% filter(average == max(average)) 
 kable(max, col.names = c("Max Interval", "Average Steps"), digits = 1, align = c("c", "c"))
 ```
+
+<table>
+ <thead>
+  <tr>
+   <th style="text-align:center;"> Max Interval </th>
+   <th style="text-align:center;"> Average Steps </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:center;"> 835 </td>
+   <td style="text-align:center;"> 206.2 </td>
+  </tr>
+</tbody>
+</table>
 
 ## Imputing missing values
 
 Dplyr-based analysis of the raw data indicates 2,304 observations with missing step values.  There
 are no missing dates or intervals.
 
-```{r}
+
+```r
 missing <- data %>% 
 	filter(is.na(steps)) %>% 
 	summarise(count = n())
 kable(missing)
 ```
+
+<table>
+ <thead>
+  <tr>
+   <th style="text-align:right;"> count </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:right;"> 2304 </td>
+  </tr>
+</tbody>
+</table>
 In this case, an imputing strategy of replacing NAs with the average for the specific interval
 period in question across all days was chosen.  NAs were removed from the data to produce the time-series
 plot shown immediately above.  'Left_join and 'coalesce' from the 'dplyr' package were used in 
 conjunction with this revised data set to replace the NAs.  A histogram of the wrangled data
 indicates inputing the average interval value retained the previous distribution symmetry but reduced the
  variation, indicated by a more vertical and "skinnier" distribution.    
-```{r}
+
+```r
 data3 <- data %>%
 	left_join(data2)
+```
+
+```
+## Joining, by = "interval"
+```
+
+```r
 data3$steps <- coalesce(data3$steps, data3$average)
 data3a <- data3 %>%
 	group_by (date) %>%
@@ -95,20 +180,89 @@ ggplot(data3a, aes(x = total))+
 	labs(subtitle = "NA values replaced by imputing time-of-day average") + 
 	labs(x = "Total Number of Steps per Day")
 ```
-```{r results = "hide"}
+
+![plot of chunk unnamed-chunk-7](figure/unnamed-chunk-7-1.png)
+
+```r
 st2 <- as.data.frame(unclass(summary(data3a$total)))
 kable(st, col.names = c("With NAs")) %>%
 	kable_styling(full_width = FALSE, position = "float_left")
 kable(st2, col.names = c("Without NAs")) %>%
 	kable_styling(full_width = FALSE, position = "left")
 ```
-```{r echo = FALSE}
-st2 <- as.data.frame(unclass(summary(data3a$total)))
-kable(st, col.names = c("With NAs")) %>%
-	kable_styling(full_width = FALSE, position = "float_left")
-kable(st2, col.names = c("Without NAs")) %>%
-	kable_styling(full_width = FALSE, position = "left")
-```
+<table class="table" style="width: auto !important; float: left; margin-right: 10px;">
+ <thead>
+  <tr>
+   <th style="text-align:left;">   </th>
+   <th style="text-align:right;"> With NAs </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> Min. </td>
+   <td style="text-align:right;"> 41.00 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> 1st Qu. </td>
+   <td style="text-align:right;"> 8841.00 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Median </td>
+   <td style="text-align:right;"> 10765.00 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Mean </td>
+   <td style="text-align:right;"> 10766.19 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> 3rd Qu. </td>
+   <td style="text-align:right;"> 13294.00 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Max. </td>
+   <td style="text-align:right;"> 21194.00 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> NA's </td>
+   <td style="text-align:right;"> 8.00 </td>
+  </tr>
+</tbody>
+</table>
+
+<table class="table" style="width: auto !important; ">
+ <thead>
+  <tr>
+   <th style="text-align:left;">   </th>
+   <th style="text-align:right;"> Without NAs </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> Min. </td>
+   <td style="text-align:right;"> 41.00 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> 1st Qu. </td>
+   <td style="text-align:right;"> 9819.00 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Median </td>
+   <td style="text-align:right;"> 10766.19 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Mean </td>
+   <td style="text-align:right;"> 10766.19 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> 3rd Qu. </td>
+   <td style="text-align:right;"> 12811.00 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Max. </td>
+   <td style="text-align:right;"> 21194.00 </td>
+  </tr>
+</tbody>
+</table>
 <br> 
 Comparison of the summary statistics for the two data sets shows identical minimums, maximums, means and medians, but different
 quartile values.  These results reinforce the noted reduced variation.  Minimum and maximum values
@@ -126,12 +280,20 @@ weekend plot, the large early morning spike is absent and activity throughout th
 higher level. This seems reasonable given many individuals start their weekends later in the morning
 and spend the day doing non-sedentary activities.
 
-```{r}
+
+```r
 data4 <- data3 %>%
 	mutate(WE = weekdays(date)) %>%
 	mutate(WE = as.factor(ifelse(WE == "Saturday" | WE == "Sunday", "weekend", "weekday"))) %>%
 	group_by(interval, WE) %>%
 	summarize(average = mean(steps))
+```
+
+```
+## `summarise()` has grouped output by 'interval'. You can override using the `.groups` argument.
+```
+
+```r
 ggplot(data4, aes(x=interval, y=average)) +
 	geom_line() + 
 	theme_light() + 
@@ -142,3 +304,5 @@ ggplot(data4, aes(x=interval, y=average)) +
 		labels = c("3 am", "6 am", "9 am", "Noon", "3 pm", "6 pm", "9 pm")) +
 	facet_grid(rows = vars(WE))
 ```
+
+![plot of chunk unnamed-chunk-10](figure/unnamed-chunk-10-1.png)
